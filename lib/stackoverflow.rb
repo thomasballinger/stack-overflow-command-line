@@ -299,36 +299,37 @@ module StackOverflow
 
         def question_viewer(question)
             answers = question['answers']
-            nb = 1
+            answers.sort_by! {|answer| -answer['score']}
             
-            table = Terminal::Table.new do |t|
-                t << ["Question", html2text(question['body'])]
-                t.title = question['title'] + "\n\n" + question['link']
-                t << :separator
-                t << :separator
-
-                answers.each do |answer|
-                    text = html2text(answer['body'])
-                    t << ["[#{nb}] (+#{answer['score']})", "#{text}"]
-                    t << :separator
-                    nb += 1
-                end
+            man =
+%{
+.TH "#{'title'}" "#{'section'}" "#{'2012-01-01'}" "#{'SO'}" "#{question['title']}"
+.SH QUESTION
+#{question['title']}
+#{question['link']}
+#{html2text(question['body'])}
+.SH ANSWERS
+}
+            nb = 0
+            answers.each do |answer|
+                nb = nb + 1
+                answerText =
+%{
+.SS [#{nb}](#{"%+d" % answer['score']}) #{answer['owner']['display_name']}
+#{html2text(answer['body'])}
+}
+                man << answerText
             end
 
-            IO.popen("less", "w") { |f| f.puts table }
+            File.open('temp', 'w') {|f| f.write(man) }
+            system 'man ./temp'
         end
 
         def html2text(html)
             doc = Nokogiri::HTML(html)
             doc = doc.css('body').text.squeeze(" ").squeeze("\n").gsub(/[\n]+/, "\n\n")
-            wordwrap(doc)
         end
 
-        def wordwrap(str, columns=80)
-            str.gsub(/\t/, "    ").gsub(/.{1,#{ columns }}(?:\s|\Z)/) do
-                ($& + 5.chr).gsub(/\n\005/, "\n").gsub(/\005/, "\n")
-            end
-        end
     end
 
     class Command
