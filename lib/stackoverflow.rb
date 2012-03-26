@@ -1,5 +1,3 @@
-#!/usr/bin/env ruby
-#
 # Copyright (C) 2012 Xavier Antoviaque <xavier@antoviaque.org>
 #
 # This software's license gives you freedom; you can copy, convey,
@@ -56,8 +54,8 @@ module StackOverflow
 
     class DB
         def initialize
-            @db     = SQLite3::Database.new(File.join(Dir.home, ".stackoverflow/stackoverflow.db"))
-            @db_idx = SQLite3::Database.new(File.join(Dir.home, ".stackoverflow/stackoverflow_idx.db"))
+            @db       = SQLite3::Database.new(File.join(Dir.home, ".stackoverflow/stackoverflow.db"))
+            @db_idx   = SQLite3::Database.new(File.join(Dir.home, ".stackoverflow/stackoverflow_idx.db"))
         end
 
         def db_error_catching
@@ -305,7 +303,6 @@ module StackOverflow
 %{
 .TH "#{'title'}" "#{'section'}" "#{'2012-01-01'}" "#{'SO'}" "#{question['title']}"
 .SH QUESTION
-#{question['title']}
 #{question['link']}
 #{html2text(question['body'])}
 .SH ANSWERS
@@ -327,42 +324,44 @@ module StackOverflow
 
         def html2text(html)
             doc = Nokogiri::HTML(html)
-            doc = doc.css('body').text.squeeze(" ").squeeze("\n").gsub(/[\n]+/, "\n\n")
+            doc.css('body').text.squeeze(" ").squeeze("\n").gsub(/[\n]+/, "\n\n")
         end
 
     end
 
     class Command
         def run
-            options = {}
+            options = {:run => true}
             OptionParser.new do |opts|
                 opts.banner = "** Usage: so [options] <search string> [<question_id>]"
                 opts.on("-h", "--help", "Help") do |v|
                     help
-                    exit
+                    options[:run] = false
                 end
                 opts.on("-u", "--update", "Update local database") do |v|
                     DBUpdater.new.update
-                    exit
+                    options[:run] = false
                 end
                 opts.on("-o", "--offline", "Offline mode") do |v|
-                    options['offline'] = true
+                    options[:offline] = true
                 end
             end.parse!
 
             if ARGV.length < 1
                 help
-                exit
+                options[:run] = false
             end
 
-            # last argument is integer when user is specifing a question_nb from the results
-            question_nb = nil
-            if ARGV[-1] =~ /^[0-9]+$/
-                question_nb = ARGV.pop.to_i
-            end
+            if options[:run]
+                # last argument is integer when user is specifing a question_nb from the results
+                question_nb = nil
+                if ARGV[-1] =~ /^[0-9]+$/
+                    question_nb = ARGV.pop.to_i
+                end
 
-            search_string = ARGV.join(' ')
-            search(search_string, question_nb, options)
+                search_string = ARGV.join(' ')
+                search(search_string, question_nb, options)
+            end
         end
 
         def help
